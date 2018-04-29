@@ -1,0 +1,22 @@
+#!/usr/bin/expect -f
+
+set nodeaddress [lindex $argv 0]
+set username    [lindex $argv 1]
+set password    [lindex $argv 2]
+set actioncmd		[lindex $argv 3]
+set promptp "assword: "
+set promptc "$ "
+
+spawn ssh  ${username}@$nodeaddress
+expect {
+        "(yes/no)?" { send "yes\r";exp_continue }
+        "$promptp" { send "${password}\r" }
+}
+#expect "$promptc"
+#send "hostname\r"
+send $actioncmd\r
+#expect "$promptc"
+send "exit\r"
+
+expect eof
+exit 0
