@@ -1,24 +1,103 @@
-#!/usr/bin/python
+#!/usr/bin/env python
+# coding=utf-8
+# -*- coding: utf-8 -*-
 
 import subprocess
 import threading
 import time
+import sys
 import os
+import paramiko
+import warnings
+warnings.filterwarnings("ignore")
 
-class MyThread(threading.Thread):
-    def __init__(self,ip,username,password):
-        super(MyThread,self).__init__()
-        self.ip = ip
-        self.username = username
-    	self.password = password
-	    #self.actioncmd = actioncmd
-    def getdata(self):
-    	cmd = "./cmd.exp %s %s %s %s &"%(self.ip,self.username,self.password,'\'sleep 5 && echo 1\'')
-    	run_cmd = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
-        self.result = run_cmd.stdout.read()
-        return self.result
-    def get_result(self):
-        return self.result 
+global cliinput
+global stdin
+global stdout
+global stderr
+
+cliinput=[]
+stdout=classmethod
+lock = threading.Lock()
+
+def inputcli():
+    clilist = []
+    print "#########################################################"
+    print "#pleas input cli, [echo start with 'do', end with 'end']#"
+    print "#########################################################"
+    while True:
+        command = raw_input('[remote-host]$')
+        command = str(command)
+        if command == 'end':
+            break;
+        else:
+            clilist.append(command)
+            if clilist[-1] =='do':
+                clilist.append('hostname')
+    return  clilist
+
+"""
+    clistr = ",".join(clilist)
+    clistr.split(',')
+
+    cli_str = ""
+    for cli in clistr.split(','):
+        cli = "'"+cli+"'"
+        cli_add = cli.encode('utf8')
+        cli_str = cli_str + ',' + cli_add
+    cli_str = cli_str[1:]
+    return cli_str
+"""
+
+
+def sshnode(ip,username,password,args):
+    x = 10000
+    ssh = paramiko.SSHClient()
+    ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+    time.sleep(0.1)
+    ssh.connect(ip,22,username,password)
+    #print args
+
+    for index,one_cli in enumerate(args):
+        #cmd = one_cli
+        #ssh.exec_command(cmd)
+        if one_cli == 'do':
+            x = index
+            continue
+        if index-x > 0:
+            lock.acquire()
+            try:
+                cmd = one_cli
+                ssh.exec_command(cmd)
+                stdin, stdout, stderr = ssh.exec_command(cmd)
+                result = stdout.read()
+                if not result:
+                    result = stderr.read()
+                print result.decode()
+            finally:
+                lock.release()
+    ssh.close()
+#sshnode('localhost','cyy','echo@520277',inputcli())
+
+
+def getdata(name,ip,username,password):
+    #print type(ip)
+    #print type(username)
+    #print type(password)
+    #print type(cliinput)
+    ##cmd = sshnode(ip,username,password,cliinput)
+   # print name
+    sshnode(ip,username,password,cliinput)
+    #os.exec(cmd)
+#    result1 = run_cmd.stdout.read()
+#    run_cmd = subprocess.Popen("id", shell=True, stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
+#    result2 = run_cmd.stdout.read()
+#    print "="*20
+#    print result1
+#    print result2
+#    print "="*20
+    return
+
 
 def readcfg(p):
     cfgList = []
@@ -29,25 +108,56 @@ def readcfg(p):
             continue
         cfgList.append(line)
     return cfgList
-       
+
+
+
+def banner():
+    print "which nodetype do you run it,[ such as CG/MME/SAEGW/PCRF]"
+    nodetype = raw_input().lower()
+    if nodetype == 'cg':
+        node ='./cg.cfg'
+    elif nodetype == 'mme':
+        node ='./mme.cfg'
+        print " "
+    elif nodetype == 'saegw':
+        node ='./saegw.cfg'
+    elif nodetype == 'pcrf':
+        node ='./pcrf.cfg'
+    else:
+        sys.exit()
+    return node
+
+
+
 def main():
-    st = time.time()
     actioncmd = 'ls'
-    starttime = time.time()
     threads = []
-    for msg in readcfg('./saegw.cfg'):
+    global cliinput
+    #print cliinput
+    node = banner()
+    cliinput = list(inputcli())
+
+    st = time.time()
+    for msg in readcfg(node):
         msgList = msg.split()
         name,ip,username,password = msgList[0],msgList[1],msgList[2],msgList[3]
-    	#print name,ip,username,password
-    	t = MyThread(ip,username,password)
+    	t = threading.Thread(target=getdata,args=(name,ip,username,password))
+        #t.run()
     	threads.append(t)
-    	t.start()
+        #result = stdout.read()
+        #if not result:
+        #    result = stderr.read()
+        #print(result.decode())
     for t in threads:
-        #t.join()
-        print t.getdata()
+        t.start()
+    for t in threads:
+        t.join()
+        #print t.get_result()
     et = time.time()
     print "%sFinished [run time: %.2f]" % ( "-" * 40, et - st)
-    
 main()
+
+
+
 
 
