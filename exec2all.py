@@ -1,3 +1,4 @@
+
 #!/usr/bin/env python
 # coding=utf-8
 # -*- coding: utf-8 -*-
@@ -23,7 +24,7 @@ lock = threading.Lock()
 def inputcli():
     clilist = []
     print "#########################################################"
-    print "#pleas input cli, [echo start with 'do', end with 'end']#"
+    print "#Pleas input cli, [echo start with 'do', end with 'end']#"
     print "#########################################################"
     while True:
         command = raw_input('[remote-host]$')
@@ -112,13 +113,16 @@ def readcfg(p):
 
 
 def banner():
+    print "#########################################################"
     print "which nodetype do you run it,[ such as CG/MME/SAEGW/PCRF]"
-    nodetype = raw_input().lower()
+    print "#########################################################"
+    nodetype = raw_input('Choose NodeType: ').lower()
+    #nodetype = sys.argv[0]
+    #print(sys.argv[1])
     if nodetype == 'cg':
         node ='./cg.cfg'
     elif nodetype == 'mme':
         node ='./mme.cfg'
-        print " "
     elif nodetype == 'saegw':
         node ='./saegw.cfg'
     elif nodetype == 'pcrf':
@@ -127,17 +131,8 @@ def banner():
         sys.exit()
     return node
 
-
-
-def main():
-    actioncmd = 'ls'
+def dothreading(node):
     threads = []
-    global cliinput
-    #print cliinput
-    node = banner()
-    cliinput = list(inputcli())
-
-    st = time.time()
     for msg in readcfg(node):
         msgList = msg.split()
         name,ip,username,password = msgList[0],msgList[1],msgList[2],msgList[3]
@@ -153,6 +148,15 @@ def main():
     for t in threads:
         t.join()
         #print t.get_result()
+
+def main():
+    actioncmd = 'ls'
+    global cliinput
+    #print cliinput
+    node = banner()
+    cliinput = list(inputcli())
+    st = time.time()
+    dothreading(node)
     et = time.time()
     print "%sFinished [run time: %.2f]" % ( "-" * 40, et - st)
 main()
